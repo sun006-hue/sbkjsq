@@ -8,6 +8,12 @@ on:
       - 'android-app/**'
       - 'index.html'
       - '.github/workflows/build-apk.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'android-app/**'
+      - 'index.html'
+      - '.github/workflows/build-apk.yml'
 
 permissions:
   contents: write
@@ -44,7 +50,15 @@ jobs:
       - name: Build APK
         run: gradle -p android-app :app:assembleDebug --no-daemon
 
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: waste-profit-calculator-apk
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
       - name: Publish APK into repository
+        if: github.event_name != 'pull_request'
         run: |
           mkdir -p dist
           cp android-app/app/build/outputs/apk/debug/app-debug.apk "dist/废品利润计算器.apk"
