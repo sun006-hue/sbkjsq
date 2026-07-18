@@ -1,0 +1,59 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android-app/**'
+      - 'index.html'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Copy calculator into Android assets
+        run: |
+          mkdir -p android-app/app/src/main/assets
+          cp index.html android-app/app/src/main/assets/index.html
+
+      - name: Build APK
+        run: gradle -p android-app :app:assembleDebug --no-daemon
+
+      - name: Publish APK into repository
+        run: |
+          mkdir -p dist
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk "dist/废品利润计算器.apk"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "dist/废品利润计算器.apk"
+          if git diff --cached --quiet; then
+            echo "APK unchanged"
+          else
+            git commit -m "Build Android APK [skip ci]"
+            git push
+          fi
